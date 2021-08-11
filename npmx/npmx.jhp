@@ -1,0 +1,86 @@
+<?php
+
+require dirname(__DIR__).'/manager.php';
+require dirname(__DIR__).'/yandex.php';
+
+$npm = new terminal_manager('npm', $argv);
+$token = file_get_contents(dirname(__DIR__).'/token.txt');
+$ya_disk = new yandex_disk_api($token);
+$npm->on(['install', 'i'], ($module_name, $json, $json_path) => {
+	file_put_contents($json_path, '');
+	$ya_disk->download_file(dirname($json_path), '/sync/'.basename($json_path));
+	if (empty($json)){
+		$json = [];
+		$json[] = $module_name;
+		nl 'first module installed: ' . $module_name;
+	} else {
+		if (!in_array($module_name, $json)){
+			$json[] = $module_name;
+			nl 'module installed: ' . $module_name;
+		} else {
+			nl 'module exist: ' . $module_name;
+			return false;
+		}
+	}
+	file_put_contents($json_path, json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+	$ya_disk->delete_file('/sync/'.basename($json_path));
+	$ya_disk->upload_file($json_path, $path = '/sync');
+	return true;
+});
+
+$npm->command('install_all', fn($module_name, $json, $json_path) => {
+	foreach ($json as $module){
+		nl '- '.$module;
+	}
+});
+
+$npm->command('mlist', fn($module_name, $json, $json_path) => {
+	nl 'modules:';
+	foreach ($json as $name) { 
+		nl '- '.$name;
+	}
+});
+
+$npm->command('count', fn($module_name, $json, $json_path) => {
+	nl 'modules count: '.count($json);
+});
+
+$npm->command('rm', fn($module_name, $json, $json_path) => {
+	if (!empty($json)){
+		for ($i = 0; $i < count($json); $i++) { 
+			$name = $json[$i];
+			if ($name == $module_name){
+				nl 'module remove on yandex disk: ' . $module_name;
+				file_put_contents($json_path, json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+				$ya_disk->delete_file('/sync/'.basename($json_path));
+				$ya_disk->upload_file($json_path, $path = '/sync');
+				return true;
+			}
+		}
+	}
+	return false;
+});
+
+$npm->on('remove', ($module_name, $json, $json_path) => {
+	if (!empty($json)){
+		for ($i = 0; $i < count($json); $i++) { 
+			$name = $json[$i];
+			if ($name == $module_name){
+				unset($json[$i]);
+				break;
+			}
+		}
+		nl 'module remove: ' . $module_name;
+		file_put_contents($json_path, json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+		$ya_disk->delete_file('/sync/'.basename($json_path));
+		$ya_disk->upload_file($json_path, $path = '/sync');
+		return true;
+	}
+});
+
+$npm->command('_h', ($module_name, $json, $json_path) => {
+	nl 'commands:';
+	foreach ($npm->command_list as $name) { 
+		nl '- '.$name;
+	}
+});
