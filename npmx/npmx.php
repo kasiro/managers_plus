@@ -9,7 +9,6 @@ $ya_disk = new yandex_disk_api($token);
 $allvars = get_defined_vars();
 $npm->on(['install', 'i'], function($module_name, $json, $json_path) use ($allvars) {
 	extract($allvars);
-	file_put_contents($json_path, '');
 	$ya_disk->download_file(dirname($json_path), '/sync/'.basename($json_path));
 	if (empty($json)){
 		$json = [];
@@ -37,9 +36,13 @@ $npm->command('install_all', function ($module_name, $json, $json_path) {
 });
 
 $npm->command('mlist', function ($module_name, $json, $json_path) {
-	echo 'modules:' . PHP_EOL;
-	foreach ($json as $name) { 
-		echo '- '.$name . PHP_EOL;
+	if (!empty($json)){
+		echo 'modules:' . PHP_EOL;
+		foreach ($json as $name) { 
+			echo '- '.$name . PHP_EOL;
+		}
+	} else {
+		echo 'Модули не найдены' . PHP_EOL;
 	}
 });
 

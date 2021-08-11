@@ -9,16 +9,20 @@ class terminal_manager {
 		$this->args = $args;
 	}
 
+	public function get_json(){
+		$this->json_file = __DIR__."/json/{$this->manager_name}_modules.json";
+		if (file_exists($this->json_file)){
+			return json_decode(file_get_contents($this->json_file), true);
+		} else {
+			file_put_contents($this->json_file, '[]');
+			return [];
+		}
+	}
+
 	public function command(string|array $command_name, callable $func){
 		$first = $this->args[1];
 		$command = $this->manager_name.' '.implode(' ', $this->args);
-		$json_file = __DIR__."/json/{$this->manager_name}_modules.json";
-		if (file_exists($json_file)){
-			$npm_json = json_decode(file_get_contents($json_file), true);
-		} else {
-			file_put_contents($json_file, '');
-			$npm_json = [];
-		}
+		$this->manager_json = $this->get_json();
 		$module_name = '';
 		for ($i = 2; $i <= count($this->args); $i++){
 			if (!str_starts_with($this->args[$i], '-')){
@@ -33,11 +37,11 @@ class terminal_manager {
 
 		if (is_string($command_name)){
 			if ($first == $command_name){
-				$func($module_name, $npm_json, $json_file);
+				$func($module_name, $this->manager_json, $this->json_file);
 			}
 		} elseif (is_array($command_name)) {
 			if (in_array($first, $command_name)){
-				$func($module_name, $npm_json, $json_file);
+				$func($module_name, $this->manager_json, $this->json_file);
 			}
 		}
 		if (!in_array($command_name, $this->command_list))
@@ -47,14 +51,7 @@ class terminal_manager {
 	public function on(string|array $command_name, callable $func){
 		$first = $this->args[1];
 		$command = $this->manager_name.' '.implode(' ', $this->args);
-		$json_file = __DIR__."/json/{$this->manager_name}_modules.json";
-		if (file_exists($json_file)){
-			$npm_json = json_decode(file_get_contents($json_file), true);
-		} else {
-			file_put_contents($json_file, '');
-			$npm_json = [];
-		}
-		
+		$this->manager_json = $this->get_json();
 		for ($i = 2; $i <= count($this->args); $i++){
 			if (!str_starts_with($this->args[$i], '-')){
 				$module_name = $this->args[$i];
@@ -64,14 +61,14 @@ class terminal_manager {
 
 		if (is_string($command_name)){
 			if ($first == $command_name){
-				$res = $func($module_name, $npm_json, $json_file);
+				$res = $func($module_name, $this->manager_json, $this->json_file);
 				if ($res)
 					echo $command . PHP_EOL;
 				// system($command);
 			}
 		} elseif (is_array($command_name)) {
 			if (in_array($first, $command_name)){
-				$res = $func($module_name, $npm_json, $json_file);
+				$res = $func($module_name, $this->manager_json, $this->json_file);
 				if ($res)
 					echo $command . PHP_EOL;
 				// system($command);

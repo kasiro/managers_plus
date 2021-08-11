@@ -3,21 +3,24 @@
 require dirname(__DIR__).'/manager.php';
 require dirname(__DIR__).'/yandex.php';
 
-$npm = new terminal_manager('npm', $argv);
+$pip = new terminal_manager('pip', $argv);
 $token = file_get_contents(dirname(__DIR__).'/token.txt');
 $ya_disk = new yandex_disk_api($token);
-$npm->on(['install', 'i'], ($module_name, $json, $json_path) => {
+$allvars = get_defined_vars();
+$pip->on(['install', 'i'], function($module_name, $json, $json_path) use ($allvars) {
+	extract($allvars);
+	file_put_contents($json_path, '');
 	$ya_disk->download_file(dirname($json_path), '/sync/'.basename($json_path));
 	if (empty($json)){
 		$json = [];
 		$json[] = $module_name;
-		nl 'first module installed: ' . $module_name;
+		echo 'first module installed: ' . $module_name . PHP_EOL;
 	} else {
 		if (!in_array($module_name, $json)){
 			$json[] = $module_name;
-			nl 'module installed: ' . $module_name;
+			echo 'module installed: ' . $module_name . PHP_EOL;
 		} else {
-			nl 'module exist: ' . $module_name;
+			echo 'module exist: ' . $module_name . PHP_EOL;
 			return false;
 		}
 	}
@@ -27,33 +30,29 @@ $npm->on(['install', 'i'], ($module_name, $json, $json_path) => {
 	return true;
 });
 
-$npm->command('install_all', fn($module_name, $json, $json_path) => {
+$pip->command('install_all', function ($module_name, $json, $json_path) {
 	foreach ($json as $module){
-		nl '- '.$module;
+		echo '- '.$module . PHP_EOL;
 	}
 });
 
-$npm->command('mlist', fn($module_name, $json, $json_path) => {
-	if (!empty($json)){
-		nl 'modules:';
-		foreach ($json as $name) { 
-			nl '- '.$name;
-		}
-	} else {
-		nl 'Модули не найдены';
+$pip->command('mlist', function ($module_name, $json, $json_path) {
+	echo 'modules:' . PHP_EOL;
+	foreach ($json as $name) { 
+		echo '- '.$name . PHP_EOL;
 	}
 });
 
-$npm->command('count', fn($module_name, $json, $json_path) => {
-	nl 'modules count: '.count($json);
+$pip->command('count', function ($module_name, $json, $json_path) {
+	echo 'modules count: '.count($json) . PHP_EOL;
 });
 
-$npm->command('rm', fn($module_name, $json, $json_path) => {
+$pip->command('rm', function ($module_name, $json, $json_path) {
 	if (!empty($json)){
 		for ($i = 0; $i < count($json); $i++) { 
 			$name = $json[$i];
 			if ($name == $module_name){
-				nl 'module remove on yandex disk: ' . $module_name;
+				echo 'module remove on yandex disk: ' . $module_name . PHP_EOL;
 				file_put_contents($json_path, json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 				$ya_disk->delete_file('/sync/'.basename($json_path));
 				$ya_disk->upload_file($json_path, $path = '/sync');
@@ -64,7 +63,9 @@ $npm->command('rm', fn($module_name, $json, $json_path) => {
 	return false;
 });
 
-$npm->on('remove', ($module_name, $json, $json_path) => {
+$allvars = get_defined_vars();
+$pip->on('remove', function($module_name, $json, $json_path) use ($allvars) {
+	extract($allvars);
 	if (!empty($json)){
 		for ($i = 0; $i < count($json); $i++) { 
 			$name = $json[$i];
@@ -73,7 +74,7 @@ $npm->on('remove', ($module_name, $json, $json_path) => {
 				break;
 			}
 		}
-		nl 'module remove: ' . $module_name;
+		echo 'module remove: ' . $module_name . PHP_EOL;
 		file_put_contents($json_path, json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 		$ya_disk->delete_file('/sync/'.basename($json_path));
 		$ya_disk->upload_file($json_path, $path = '/sync');
@@ -81,9 +82,11 @@ $npm->on('remove', ($module_name, $json, $json_path) => {
 	}
 });
 
-$npm->command('_h', ($module_name, $json, $json_path) => {
-	nl 'commands:';
-	foreach ($npm->command_list as $name) { 
-		nl '- '.$name;
+$allvars = get_defined_vars();
+$pip->command('_h', function($module_name, $json, $json_path) use ($allvars) {
+	extract($allvars);
+	echo 'commands:' . PHP_EOL;
+	foreach ($pip->command_list as $name) { 
+		echo '- '.$name . PHP_EOL;
 	}
 });

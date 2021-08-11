@@ -9,16 +9,20 @@ class terminal_manager {
 		$->args = $args;
 	}
 
+	public get_json(){
+		$->json_file = __DIR__."/json/{$->manager_name}_modules.json";
+		if (file_exists($->json_file)){
+			return json_decode(file_get_contents($->json_file), true);
+		} else {
+			file_put_contents($->json_file, '[]');
+			return [];
+		}
+	}
+
 	public command(string|array $command_name, callable $func){
 		$first = $->args[1];
 		$command = $->manager_name.' '.implode(' ', $->args);
-		$json_file = __DIR__."/json/{$->manager_name}_modules.json";
-		if (file_exists($json_file)){
-			$npm_json = json_decode(file_get_contents($json_file), true);
-		} else {
-			file_put_contents($json_file, '');
-			$npm_json = [];
-		}
+		$->manager_json = $->get_json();
 		$module_name = '';
 		for ($i = 2; $i <= count($->args); $i++){
 			if (!str_starts_with($->args[$i], '-')){
@@ -33,11 +37,11 @@ class terminal_manager {
 
 		if (is_string($command_name)){
 			if ($first == $command_name){
-				$func($module_name, $npm_json, $json_file);
+				$func($module_name, $->manager_json, $->json_file);
 			}
 		} elseif (is_array($command_name)) {
 			if (in_array($first, $command_name)){
-				$func($module_name, $npm_json, $json_file);
+				$func($module_name, $->manager_json, $->json_file);
 			}
 		}
 		if (!in_array($command_name, $->command_list))
@@ -47,14 +51,7 @@ class terminal_manager {
 	public on(string|array $command_name, callable $func){
 		$first = $->args[1];
 		$command = $->manager_name.' '.implode(' ', $->args);
-		$json_file = __DIR__."/json/{$->manager_name}_modules.json";
-		if (file_exists($json_file)){
-			$npm_json = json_decode(file_get_contents($json_file), true);
-		} else {
-			file_put_contents($json_file, '');
-			$npm_json = [];
-		}
-		
+		$->manager_json = $->get_json();
 		for ($i = 2; $i <= count($->args); $i++){
 			if (!str_starts_with($->args[$i], '-')){
 				$module_name = $->args[$i];
@@ -64,14 +61,14 @@ class terminal_manager {
 
 		if (is_string($command_name)){
 			if ($first == $command_name){
-				$res = $func($module_name, $npm_json, $json_file);
+				$res = $func($module_name, $->manager_json, $->json_file);
 				if ($res)
 					nl $command;
 				// system($command);
 			}
 		} elseif (is_array($command_name)) {
 			if (in_array($first, $command_name)){
-				$res = $func($module_name, $npm_json, $json_file);
+				$res = $func($module_name, $->manager_json, $->json_file);
 				if ($res)
 					nl $command;
 				// system($command);
