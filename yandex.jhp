@@ -89,16 +89,7 @@ class yandex_disk_api {
 		$res = json_decode($res, true);
 		if (empty($res['error'])) {
 			$file_name = $path . '/' . basename($yd_file);
-			$file = @fopen($file_name, 'w');
-			$ch = curl_init($res['href']);
-			curl_setopt($ch, CURLOPT_FILE, $file);
-			curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: OAuth ' . $->token]);
-			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-			curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-			curl_setopt($ch, CURLOPT_HEADER, false);
-			curl_exec($ch);
-			curl_close($ch);
-			fclose($file);
+			file_put_contents($file_name, file_get_contents($res['href']));
 		}
 	}
 

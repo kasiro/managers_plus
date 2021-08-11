@@ -8,6 +8,7 @@ $token = file_get_contents(dirname(__DIR__).'/token.txt');
 $ya_disk = new yandex_disk_api($token);
 $npm->on(['install', 'i'], ($module_name, $json, $json_path) => {
 	$ya_disk->download_file(dirname($json_path), '/sync/'.basename($json_path));
+	$json = $npm->get_json();
 	if (empty($json)){
 		$json = [];
 		$json[] = $module_name;
@@ -48,19 +49,40 @@ $npm->command('count', fn($module_name, $json, $json_path) => {
 	nl 'modules count: '.count($json);
 });
 
-$npm->command('rm', fn($module_name, $json, $json_path) => {
+$npm->command('sync', ($module_name, $json, $json_path) => {
+	$before = count($json);
+	$ya_disk->download_file(dirname($json_path), '/sync/'.basename($json_path));
+	$json = $npm->get_json();
+	foreach ($json as $mname){
+		nl 'module "'.$mname.'" sync...';
+	}
+	$after = count($json);
+	if ($before < $after){
+		nl 'modules installed: '.($after - $before);
+	} else {
+		nl 'modules uninstalled: '.($before - $after);
+	}
+	nl 'modules synchronized';
+	file_put_contents($json_path, json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+});
+
+$npm->command('rm', ($module_name, $json, $json_path) => {
 	if (!empty($json)){
+		$before = $json;
 		for ($i = 0; $i < count($json); $i++) { 
 			$name = $json[$i];
 			if ($name == $module_name){
+				unset($json[$i]);
 				nl 'module remove on yandex disk: ' . $module_name;
 				file_put_contents($json_path, json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 				$ya_disk->delete_file('/sync/'.basename($json_path));
-				$ya_disk->upload_file($json_path, $path = '/sync');
+				$ya_disk->upload_file($json_path, '/sync');
+				file_put_contents($json_path, json_encode($before, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 				return true;
 			}
 		}
 	}
+	nl 'module "' . $module_name.'" not found...';
 	return false;
 });
 
@@ -76,7 +98,7 @@ $npm->on('remove', ($module_name, $json, $json_path) => {
 		nl 'module remove: ' . $module_name;
 		file_put_contents($json_path, json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 		$ya_disk->delete_file('/sync/'.basename($json_path));
-		$ya_disk->upload_file($json_path, $path = '/sync');
+		$ya_disk->upload_file($json_path, '/sync');
 		return true;
 	}
 });

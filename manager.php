@@ -13,10 +13,9 @@ class terminal_manager {
 		$this->json_file = __DIR__."/json/{$this->manager_name}_modules.json";
 		if (file_exists($this->json_file)){
 			return json_decode(file_get_contents($this->json_file), true);
-		} else {
-			file_put_contents($this->json_file, '[]');
-			return [];
 		}
+		file_put_contents($this->json_file, '[]');
+		return [];
 	}
 
 	public function command(string|array $command_name, callable $func){
