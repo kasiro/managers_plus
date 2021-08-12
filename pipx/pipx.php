@@ -3,14 +3,14 @@
 require dirname(__DIR__).'/manager.php';
 require dirname(__DIR__).'/yandex.php';
 
-$npm = new terminal_manager('pip', $argv);
+$pip = new terminal_manager('pip', $argv);
 $token = file_get_contents(dirname(__DIR__).'/token.txt');
 $ya_disk = new yandex_disk_api($token);
 $allvars = get_defined_vars();
-$npm->on(['install', 'i'], function($module_name, $json, $json_path) use ($allvars) {
+$pip->on('install', function($module_name, $json, $json_path) use ($allvars) {
 	extract($allvars);
-	$ya_disk->download_file(dirname($json_path), '/sync/'.basename($json_path));
-	$json = $npm->get_json();
+	// $ya_disk->download_file(dirname($json_path), '/sync/'.basename($json_path));
+	// $json = $pip->get_json();
 	if (empty($json)){
 		$json = [];
 		$json[] = $module_name;
@@ -30,13 +30,13 @@ $npm->on(['install', 'i'], function($module_name, $json, $json_path) use ($allva
 	return true;
 });
 
-$npm->command('install_all', function ($module_name, $json, $json_path) {
+$pip->command('install_all', function ($module_name, $json, $json_path) {
 	foreach ($json as $module){
 		echo '- '.$module . PHP_EOL;
 	}
 });
 
-$npm->command('mlist', function ($module_name, $json, $json_path) {
+$pip->command('mlist', function ($module_name, $json, $json_path) {
 	if (!empty($json)){
 		echo 'modules:' . PHP_EOL;
 		foreach ($json as $name) { 
@@ -47,16 +47,16 @@ $npm->command('mlist', function ($module_name, $json, $json_path) {
 	}
 });
 
-$npm->command('count', function ($module_name, $json, $json_path) {
+$pip->command('count', function ($module_name, $json, $json_path) {
 	echo 'modules count: '.count($json) . PHP_EOL;
 });
 
 $allvars = get_defined_vars();
-$npm->command('sync', function($module_name, $json, $json_path) use ($allvars) {
+$pip->command('sync', function($module_name, $json, $json_path) use ($allvars) {
 	extract($allvars);
 	$before = count($json);
 	$ya_disk->download_file(dirname($json_path), '/sync/'.basename($json_path));
-	$json = $npm->get_json();
+	$json = $pip->get_json();
 	foreach ($json as $mname){
 		echo 'module "'.$mname.'" sync...' . PHP_EOL;
 	}
@@ -71,7 +71,7 @@ $npm->command('sync', function($module_name, $json, $json_path) use ($allvars) {
 });
 
 $allvars = get_defined_vars();
-$npm->command('rm', function($module_name, $json, $json_path) use ($allvars) {
+$pip->command('rm', function($module_name, $json, $json_path) use ($allvars) {
 	extract($allvars);
 	if (!empty($json)){
 		$before = $json;
@@ -93,7 +93,7 @@ $npm->command('rm', function($module_name, $json, $json_path) use ($allvars) {
 });
 
 $allvars = get_defined_vars();
-$npm->on('remove', function($module_name, $json, $json_path) use ($allvars) {
+$pip->on('remove', function($module_name, $json, $json_path) use ($allvars) {
 	extract($allvars);
 	if (!empty($json)){
 		for ($i = 0; $i < count($json); $i++) { 
@@ -112,10 +112,10 @@ $npm->on('remove', function($module_name, $json, $json_path) use ($allvars) {
 });
 
 $allvars = get_defined_vars();
-$npm->command('_h', function($module_name, $json, $json_path) use ($allvars) {
+$pip->command('_h', function($module_name, $json, $json_path) use ($allvars) {
 	extract($allvars);
 	echo 'commands:' . PHP_EOL;
-	foreach ($npm->command_list as $name) { 
+	foreach ($pip->command_list as $name) { 
 		echo '- '.$name . PHP_EOL;
 	}
 });

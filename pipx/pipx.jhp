@@ -3,12 +3,12 @@
 require dirname(__DIR__).'/manager.php';
 require dirname(__DIR__).'/yandex.php';
 
-$npm = new terminal_manager('pip', $argv);
+$pip = new terminal_manager('pip', $argv);
 $token = file_get_contents(dirname(__DIR__).'/token.txt');
 $ya_disk = new yandex_disk_api($token);
-$npm->on(['install', 'i'], ($module_name, $json, $json_path) => {
-	$ya_disk->download_file(dirname($json_path), '/sync/'.basename($json_path));
-	$json = $npm->get_json();
+$pip->on('install', ($module_name, $json, $json_path) => {
+	// $ya_disk->download_file(dirname($json_path), '/sync/'.basename($json_path));
+	// $json = $pip->get_json();
 	if (empty($json)){
 		$json = [];
 		$json[] = $module_name;
@@ -28,13 +28,13 @@ $npm->on(['install', 'i'], ($module_name, $json, $json_path) => {
 	return true;
 });
 
-$npm->command('install_all', fn($module_name, $json, $json_path) => {
+$pip->command('install_all', fn($module_name, $json, $json_path) => {
 	foreach ($json as $module){
 		nl '- '.$module;
 	}
 });
 
-$npm->command('mlist', fn($module_name, $json, $json_path) => {
+$pip->command('mlist', fn($module_name, $json, $json_path) => {
 	if (!empty($json)){
 		nl 'modules:';
 		foreach ($json as $name) { 
@@ -45,14 +45,14 @@ $npm->command('mlist', fn($module_name, $json, $json_path) => {
 	}
 });
 
-$npm->command('count', fn($module_name, $json, $json_path) => {
+$pip->command('count', fn($module_name, $json, $json_path) => {
 	nl 'modules count: '.count($json);
 });
 
-$npm->command('sync', ($module_name, $json, $json_path) => {
+$pip->command('sync', ($module_name, $json, $json_path) => {
 	$before = count($json);
 	$ya_disk->download_file(dirname($json_path), '/sync/'.basename($json_path));
-	$json = $npm->get_json();
+	$json = $pip->get_json();
 	foreach ($json as $mname){
 		nl 'module "'.$mname.'" sync...';
 	}
@@ -66,7 +66,7 @@ $npm->command('sync', ($module_name, $json, $json_path) => {
 	file_put_contents($json_path, json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 });
 
-$npm->command('rm', ($module_name, $json, $json_path) => {
+$pip->command('rm', ($module_name, $json, $json_path) => {
 	if (!empty($json)){
 		$before = $json;
 		for ($i = 0; $i < count($json); $i++) { 
@@ -86,7 +86,7 @@ $npm->command('rm', ($module_name, $json, $json_path) => {
 	return false;
 });
 
-$npm->on('remove', ($module_name, $json, $json_path) => {
+$pip->on('remove', ($module_name, $json, $json_path) => {
 	if (!empty($json)){
 		for ($i = 0; $i < count($json); $i++) { 
 			$name = $json[$i];
@@ -103,9 +103,9 @@ $npm->on('remove', ($module_name, $json, $json_path) => {
 	}
 });
 
-$npm->command('_h', ($module_name, $json, $json_path) => {
+$pip->command('_h', ($module_name, $json, $json_path) => {
 	nl 'commands:';
-	foreach ($npm->command_list as $name) { 
+	foreach ($pip->command_list as $name) { 
 		nl '- '.$name;
 	}
 });
