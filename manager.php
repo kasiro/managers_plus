@@ -61,16 +61,18 @@ class terminal_manager {
 		if (is_string($command_name)){
 			if ($first == $command_name){
 				$res = $func($module_name, $this->manager_json, $this->json_file);
-				if ($res)
-					echo $command . PHP_EOL;
-				// system($command);
+				if ($res){
+					// echo $command . PHP_EOL;
+					system($command);
+				}
 			}
 		} elseif (is_array($command_name)) {
 			if (in_array($first, $command_name)){
 				$res = $func($module_name, $this->manager_json, $this->json_file);
-				if ($res)
-					echo $command . PHP_EOL;
-				// system($command);
+				if ($res){
+					// echo $command . PHP_EOL;
+					system($command);
+				} 
 			}
 		}
 	}
