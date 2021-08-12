@@ -7,8 +7,10 @@ $npm = new terminal_manager('npm', $argv);
 $token = file_get_contents(dirname(__DIR__).'/token.txt');
 $ya_disk = new yandex_disk_api($token);
 $npm->on(['install', 'i'], ($module_name, $json, $json_path) => {
-	$ya_disk->download_file(dirname($json_path), '/sync/'.basename($json_path));
-	$json = $npm->get_json();
+	if ($ya_disk->file_exist('/sync/'.basename($json_path))){
+		$ya_disk->download_file(dirname($json_path), '/sync/'.basename($json_path));
+		$json = $npm->get_json();
+	}
 	if (empty($json)){
 		$json = [];
 		$json[] = $module_name;
@@ -28,9 +30,15 @@ $npm->on(['install', 'i'], ($module_name, $json, $json_path) => {
 	return true;
 });
 
-$npm->command('install_all', fn($module_name, $json, $json_path) => {
-	foreach ($json as $module){
-		nl '- '.$module;
+$npm->command('install_all', ($module_name, $json, $json_path) => {
+	if (!empty($json)){
+		nl 'installing...';
+		foreach ($json as $module){
+			$command = $npm->manager_name.' install '.$module;
+			nl $command;
+		}
+	} else {
+		nl 'Модули не найдены';
 	}
 });
 
@@ -51,8 +59,10 @@ $npm->command('count', fn($module_name, $json, $json_path) => {
 
 $npm->command('sync', ($module_name, $json, $json_path) => {
 	$before = count($json);
-	$ya_disk->download_file(dirname($json_path), '/sync/'.basename($json_path));
-	$json = $npm->get_json();
+	if ($ya_disk->file_exist('/sync/'.basename($json_path))){
+		$ya_disk->download_file(dirname($json_path), '/sync/'.basename($json_path));
+		$json = $npm->get_json();
+	}
 	foreach ($json as $mname){
 		nl 'module "'.$mname.'" sync...';
 	}

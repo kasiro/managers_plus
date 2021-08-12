@@ -21,6 +21,19 @@ class yandex_disk_api {
 	}
 
 	/**
+	 * @param string $path Файл или папка на Диске.
+	 */
+	public function file_exist($path){
+		$f = $this->get_folders(dirname(path));
+		foreach ($f as $el){
+			if ($el['name'] == basename(path)){
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
 	 * @param string $path Выведем список папки.
 	 */
 	public function get_folders($path = '/'){		
@@ -107,9 +120,9 @@ class yandex_disk_api {
 		$res = curl_exec($ch);
 		$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		curl_close($ch);
-		if (in_array($http_code, array(202, 204))) {
+		if (in_array($http_code, [202, 204])) {
 			echo basename($path).': Успешно удалено' . PHP_EOL;
 		}
 	}
-
+	
 }

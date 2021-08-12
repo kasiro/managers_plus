@@ -9,8 +9,10 @@ $ya_disk = new yandex_disk_api($token);
 $allvars = get_defined_vars();
 $npm->on(['install', 'i'], function($module_name, $json, $json_path) use ($allvars) {
 	extract($allvars);
-	$ya_disk->download_file(dirname($json_path), '/sync/'.basename($json_path));
-	$json = $npm->get_json();
+	if ($ya_disk->file_exist('/sync/'.basename($json_path))){
+		$ya_disk->download_file(dirname($json_path), '/sync/'.basename($json_path));
+		$json = $npm->get_json();
+	}
 	if (empty($json)){
 		$json = [];
 		$json[] = $module_name;
@@ -30,9 +32,17 @@ $npm->on(['install', 'i'], function($module_name, $json, $json_path) use ($allva
 	return true;
 });
 
-$npm->command('install_all', function ($module_name, $json, $json_path) {
-	foreach ($json as $module){
-		echo '- '.$module . PHP_EOL;
+$allvars = get_defined_vars();
+$npm->command('install_all', function($module_name, $json, $json_path) use ($allvars) {
+	extract($allvars);
+	if (!empty($json)){
+		echo 'installing...' . PHP_EOL;
+		foreach ($json as $module){
+			$command = $npm->manager_name.' install '.$module;
+			echo $command . PHP_EOL;
+		}
+	} else {
+		echo 'Модули не найдены' . PHP_EOL;
 	}
 });
 
@@ -55,8 +65,10 @@ $allvars = get_defined_vars();
 $npm->command('sync', function($module_name, $json, $json_path) use ($allvars) {
 	extract($allvars);
 	$before = count($json);
-	$ya_disk->download_file(dirname($json_path), '/sync/'.basename($json_path));
-	$json = $npm->get_json();
+	if ($ya_disk->file_exist('/sync/'.basename($json_path))){
+		$ya_disk->download_file(dirname($json_path), '/sync/'.basename($json_path));
+		$json = $npm->get_json();
+	}
 	foreach ($json as $mname){
 		echo 'module "'.$mname.'" sync...' . PHP_EOL;
 	}
