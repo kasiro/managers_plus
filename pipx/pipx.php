@@ -22,9 +22,34 @@ $allvars = get_defined_vars();
 // 	return $res[0];
 // 	return false;
 // };
-$allvars = get_defined_vars();
-$pip->is_install = function($module_name) use ($allvars) {
-	extract($allvars);
+function get_data($res, $first, $second, $int = 0){
+	preg_match('/'.$first.'/ms', $res, $matches);
+	$lines = explode(PHP_EOL, $matches[0]);
+	unset($lines[0]);
+	$lines = array_merge($lines, []);
+	$my_res = [];
+	foreach ($lines as $line){
+		preg_replace_callback('/'.$second.'/ms', function ($matches) use (&$my_res, $int) {
+			$my_res[] = $matches[$int];
+		}, $line);
+	}
+	$my_res = array_unique($my_res);
+	$my_res = array_merge($my_res, []);
+	$last = &$my_res[count($my_res) - 1];
+	if (strlen($last) == 0 || $last == '')
+		unset($my_res[count($my_res) - 1]);
+	return $my_res;
+}
+$pip->get_help_list = function () {
+	exec('pip -h', $res);
+	// print_r($res);
+	$res = implode(PHP_EOL, $res);
+	$commands = get_data($res, 'Commands:.*?\n\n', '\s{2}([a-z]+)', 1);
+	$options = get_data($res, 'General Options:.*', '\s{1,2}(-{1,2}[\w-]+)', 1);
+	// $options = array_merge($options_2, $options_1);
+	return [$commands, $options];
+};
+$pip->is_install = function ($module_name) {
 	exec('pip list', $res);
 	unset($res[0]);unset($res[1]);$res = array_merge($res, []);
 	$modules = [];
@@ -355,8 +380,20 @@ $pip->command('_h', function($module_name, $json, $json_path) use ($allvars) {
 	}
 });
 
-$pip->other(function ($manager_name, $args) {
-	$command = $manager_name.' '.implode(' ', $args);
-	system($command);
-	// echo $command . ' not found' . PHP_EOL;
+$allvars = get_defined_vars();
+$pip->other(function($manager_name, $args) use ($allvars) {
+	extract($allvars);
+	if (count($args) > 1){
+		$command = $manager_name.' '.implode(' ', $args);
+	} else {
+		$command = $manager_name.' '.$args[1];
+		$com = $args[1];
+	}
+	list($commands, $options) = $pip->get_help_list();
+	print_r($commands);
+	print_r($options);
+	// if (in_array($com, $commands)){
+	// 	echo $command . PHP_EOL;
+	// }
+	// system($command);
 });

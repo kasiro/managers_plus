@@ -20,7 +20,34 @@ if ($ie){
 // 	return $res[0];
 // 	return false;
 // };
-$pip->is_install = ($module_name) => {
+function get_data($res, $first, $second, $int = 0){
+	preg_match('/'.$first.'/ms', $res, $matches);
+	$lines = explode(PHP_EOL, $matches[0]);
+	unset($lines[0]);
+	$lines = array_merge($lines, []);
+	$my_res = [];
+	foreach ($lines as $line){
+		preg_replace_callback('/'.$second.'/ms', fn($matches) use (&$my_res, $int) => {
+			$my_res[] = $matches[$int];
+		}, $line);
+	}
+	$my_res = array_unique($my_res);
+	$my_res = array_merge($my_res, []);
+	$last = &$my_res[count($my_res) - 1];
+	if (strlen($last) == 0 || $last == '')
+		unset($my_res[count($my_res) - 1]);
+	return $my_res;
+}
+$pip->get_help_list = fn() => {
+	exec('pip -h', $res);
+	// print_r($res);
+	$res = implode(PHP_EOL, $res);
+	$commands = get_data($res, 'Commands:.*?\n\n', '\s{2}([a-z]+)', 1);
+	$options = get_data($res, 'General Options:.*', '\s{1,2}(-{1,2}[\w-]+)', 1);
+	// $options = array_merge($options_2, $options_1);
+	return [$commands, $options];
+};
+$pip->is_install = fn($module_name) => {
 	exec('pip list', $res);
 	unset($res[0]);unset($res[1]);$res = array_merge($res, []);
 	$modules = [];
@@ -329,8 +356,18 @@ $pip->command('_h', ($module_name, $json, $json_path) => {
 	}
 });
 
-$pip->other(fn($manager_name, $args) => {
-	$command = $manager_name.' '.implode(' ', $args);
-	system($command);
-	// nl $command . ' not found';
+$pip->other(($manager_name, $args) => {
+	if (count($args) > 1){
+		$command = $manager_name.' '.implode(' ', $args);
+	} else {
+		$command = $manager_name.' '.$args[1];
+		$com = $args[1];
+	}
+	var [$commands, $options] = $pip->get_help_list();
+	print_r($commands);
+	print_r($options);
+	// if (in_array($com, $commands)){
+	// 	nl $command;
+	// }
+	// system($command);
 });
