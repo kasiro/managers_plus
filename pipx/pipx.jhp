@@ -3,7 +3,7 @@
 require dirname(__DIR__).'/manager.php';
 require dirname(__DIR__).'/yandex.php';
 
-import 'arr';
+import: include 'arr';
 
 function internet_exists(): bool {
 	return @file_get_contents('https://ya.ru/') !== false;

@@ -3,7 +3,7 @@
 require dirname(__DIR__).'/manager.php';
 require dirname(__DIR__).'/yandex.php';
 
-require '/home/kasiro/Документы/projects/testphp/user_modules/arr.php';
+require '/home/kasiro/Документы/managers_plus/pipx/jhp_modules/arr.php';
 
 function internet_exists(): bool {
 	return @file_get_contents('https://ya.ru/') !== false;
