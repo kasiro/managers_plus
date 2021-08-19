@@ -2,6 +2,9 @@
 
 class terminal_manager {
 	public $command_list = [];
+	public $on_list = [];
+	public $descriptions = [];
+	public $data = [];
 
 	function __con($manager_name, $args){
 		unset($args[0]);
@@ -20,6 +23,10 @@ class terminal_manager {
 
 	public command(string|array $command_name, callable $func){
 		$first = $->args[1];
+		$my_args = [];
+		for ($i = 2; $i < count($->args); $i++) { 
+			$my_args[] = $->args[$i];
+		}
 		$command = $->manager_name.' '.implode(' ', $->args);
 		$->manager_json = $->get_json();
 		$module_name = '';
@@ -30,27 +37,59 @@ class terminal_manager {
 			}
 		}
 
-		if ($module_name == ''){
-			$module_name = '"not found"';
-		}
-
 		if (is_string($command_name)){
 			if ($first == $command_name){
-				$func($module_name, $->manager_json, $->json_file);
+				$func($module_name, $->manager_json, $->json_file, $my_args);
 			}
 		} elseif (is_array($command_name)) {
 			if (in_array($first, $command_name)){
-				$func($module_name, $->manager_json, $->json_file);
+				$func($module_name, $->manager_json, $->json_file, $my_args);
 			}
 		}
 		if (!in_array($command_name, $->command_list))
 			$->command_list[] = $command_name;
 	}
 
+	public __call($name, $args){
+		$func = $->data[$name.'_var'];
+		return $func(...$args);
+	}
+
+	public __get($name){
+		if (isset($->data[$name.'_var'])){
+			return $->data[$name.'_var'];
+		}
+		return false;
+	}
+
+	public __set($name, $value){
+		$->data[$name.'_var'] = $value;
+	}
+
+	public setDescription($command_name, $desc){
+		$all_list = array_merge($->command_list, $->on_list);
+		if (in_array($command_name, $all_list)){
+			if (!array_key_exists($command_name, $->descriptions)){
+				$->descriptions[$command_name] = $desc;
+			}
+		}
+	}
+
+	public getDescription($command_name){
+		if (array_key_exists($command_name, $->descriptions)){
+			return $->descriptions[$command_name];
+		}
+	}
+
 	public on(string|array $command_name, callable $func){
 		$first = $->args[1];
+		$my_args = [];
+		for ($i = 2; $i < count($->args); $i++) { 
+			$my_args[] = $->args[$i];
+		}
 		$command = $->manager_name.' '.implode(' ', $->args);
 		$->manager_json = $->get_json();
+		$module_name = '';
 		for ($i = 2; $i <= count($->args); $i++){
 			if (!str_starts_with($->args[$i], '-')){
 				$module_name = $->args[$i];
@@ -60,7 +99,7 @@ class terminal_manager {
 
 		if (is_string($command_name)){
 			if ($first == $command_name){
-				$res = $func($module_name, $->manager_json, $->json_file);
+				$res = $func($module_name, $->manager_json, $->json_file, $my_args);;
 				if ($res){
 					// nl $command;
 					system($command);
@@ -68,12 +107,22 @@ class terminal_manager {
 			}
 		} elseif (is_array($command_name)) {
 			if (in_array($first, $command_name)){
-				$res = $func($module_name, $->manager_json, $->json_file);
+				$res = $func($module_name, $->manager_json, $->json_file, $my_args);;
 				if ($res){
 					// nl $command;
 					system($command);
 				} 
 			}
+		}
+		if (!in_array($command_name, $->on_list))
+			$->on_list[] = $command_name;
+	}
+
+	public other(callable $func){
+		$command_name = $->args[1];
+		$command = $->manager_name.' '.implode(' ', $->args);
+		if (!in_array($command_name, $->on_list) && !in_array($command_name, $->command_list)){
+			$res = $func($->manager_name, $->args);
 		}
 	}
 }

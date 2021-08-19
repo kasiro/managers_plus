@@ -1,1 +1,20 @@
-[]
+[
+    "pytelegrambotapi",
+    "beautifulsoup4",
+    "bs4",
+    "fake-useragent",
+    "PyAutoGUI",
+    "Pillow",
+    "gpg",
+    "keyring",
+    "pycrypto",
+    "pyquery",
+    "pyTelegramBotAPI",
+    "requests",
+    "schedule",
+    "selenium",
+    "TgCrypto",
+    "youtube-dl",
+    "Pyrogram",
+    "colorama"
+]

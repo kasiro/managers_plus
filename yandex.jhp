@@ -82,7 +82,7 @@ class yandex_disk_api {
 			$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 			curl_close($ch);
 			if ($http_code == 201) {
-				nl basename($file).' успешно загружен';
+				nl basename($file).' успешно загружен на Сервер (Диск)';
 			}
 		}
 	}

@@ -3,36 +3,110 @@
 require dirname(__DIR__).'/manager.php';
 require dirname(__DIR__).'/yandex.php';
 
+import 'arr';
+
+function internet_exists(): bool {
+	return @file_get_contents('https://ya.ru/') !== false;
+}
 $pip = new terminal_manager('pip', $argv);
-$token = file_get_contents(dirname(__DIR__).'/token.txt');
-$ya_disk = new yandex_disk_api($token);
-$pip->on('install', ($module_name, $json, $json_path) => {
-	// $ya_disk->download_file(dirname($json_path), '/sync/'.basename($json_path));
-	// $json = $pip->get_json();
-	if (empty($json)){
-		$json = [];
-		$json[] = $module_name;
-		nl 'first module installed: ' . $module_name;
+$ie = internet_exists();
+$config = [];
+$config['ieno'] = 'Интернет не доступен';
+$config['ieyes'] = 'Интернет доступен';
+$config['diskno'] = str_replace('Интернет', 'Диск', $config['ieno']);
+// $ie = false;
+if ($ie){
+	$token = file_get_contents(dirname(__DIR__).'/token.txt');
+	$ya_disk = new yandex_disk_api($token);
+}
+// $pip->get_module = ($module_name) => {
+// 	exec('pip list | grep '.$module_name, $res);
+// 	return $res[0];
+// 	return false;
+// };
+$pip->is_install = ($module_name) => {
+	exec('pip list', $res);
+	unset($res[0]);unset($res[1]);$res = array_merge($res, []);
+	$modules = [];
+	foreach ($res as $line){
+		$modules[] = array_unique(explode(' ', $line))[0];
+	}
+	if (in_array($module_name, $modules)){
+		return true;
+	} else return false;
+};
+$pip->command('status', ($module_name, $json, $json_path, $args) => {
+	if ($ie){
+		nl 'Интернет доступен';
 	} else {
-		if (!in_array($module_name, $json)){
-			$json[] = $module_name;
-			nl 'module installed: ' . $module_name;
+		nl 'Интернет не подключен';
+	}
+});
+// $pip->command('get', ($module_name, $json, $json_path, $args) => {
+// 	if ($pip->is_install($module_name)){
+// 		exec('pip list', $res);
+// 		$ec = '';
+// 		$ec .= $res[0] . PHP_EOL;
+// 		$ec .= $res[1] . PHP_EOL;
+// 		$ec .= $pip->get_module($module_name);
+// 		nl $ec;
+// 		// nl 'module "'.$module_name.'" is installed';
+// 	} else {
+// 		nl 'module "'.$module_name.'" not found';
+// 	}
+// });
+$pip->on('install', ($module_name, $json, $json_path) => {
+	if ($ie){
+		$ya_disk->download_file(dirname($json_path), '/sync/'.basename($json_path));
+	}
+	// $json = $pip->get_json();
+	if (strlen($module_name) > 0 && $module_name != ''){
+		if (!$pip->is_install($module_name)){
+			if (empty($json)){
+				$json = [];
+				$json[] = $module_name;
+				nl 'first module installed: ' . $module_name;
+			} else {
+				if (!in_array($module_name, $json)){
+					$json[] = $module_name;
+					nl 'module installed: ' . $module_name;
+				} else {
+					nl 'module exist: ' . $module_name;
+					return false;
+				}
+			}
+			file_put_contents($json_path, json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+			if ($ie){
+				$ya_disk->delete_file('/sync/'.basename($json_path));
+				$ya_disk->upload_file($json_path, '/sync');
+			}
+			if (!$ie){
+				nl 'Интернет не доступен';
+			}
+			return true;
 		} else {
-			nl 'module exist: ' . $module_name;
-			return false;
+			nl 'Модуль уже установлен';
+		}
+	} else {
+		nl 'Введите Модуль';
+	}
+});
+$pip->setDescription('install', 'Устанавливает модуль и заливает');
+
+$pip->command('install_all', ($module_name, $json, $json_path) => {
+	if (strlen($module_name) == 0 || $module_name == ''){
+		if (!empty($json)){
+			nl 'installing...';
+			foreach ($json as $module){
+				$command = $pip->manager_name.' install '.$module;
+				nl $command;
+			}
+		} else {
+			nl 'Модули не найдены';
 		}
 	}
-	file_put_contents($json_path, json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-	$ya_disk->delete_file('/sync/'.basename($json_path));
-	$ya_disk->upload_file($json_path, $path = '/sync');
-	return true;
 });
-
-$pip->command('install_all', fn($module_name, $json, $json_path) => {
-	foreach ($json as $module){
-		nl '- '.$module;
-	}
-});
+$pip->setDescription('install_all', 'Устанавливает все модули из списка');
 
 $pip->command('mlist', fn($module_name, $json, $json_path) => {
 	if (!empty($json)){
@@ -44,68 +118,223 @@ $pip->command('mlist', fn($module_name, $json, $json_path) => {
 		nl 'Модули не найдены';
 	}
 });
+$pip->setDescription('mlist', 'выводит список модулей');
 
 $pip->command('count', fn($module_name, $json, $json_path) => {
-	nl 'modules count: '.count($json);
+	nl 'Колличество модулей: '.count($json);
 });
+$pip->setDescription('count', 'Выводит колличество модулей');
 
 $pip->command('sync', ($module_name, $json, $json_path) => {
-	$before = count($json);
-	$ya_disk->download_file(dirname($json_path), '/sync/'.basename($json_path));
-	$json = $pip->get_json();
-	foreach ($json as $mname){
-		nl 'module "'.$mname.'" sync...';
-	}
-	$after = count($json);
-	if ($before < $after){
-		nl 'modules installed: '.($after - $before);
+	if ($ie){
+		$before = count($json);
+		$ya_disk->download_file(dirname($json_path), '/sync/'.basename($json_path));
+		$json = $pip->get_json();
+		foreach ($json as $mname){
+			nl 'module "'.$mname.'" sync...';
+		}
+		$after = count($json);
+		if ($before < $after){
+			nl 'modules installed: '.($after - $before);
+		} else {
+			nl 'modules uninstalled: '.($before - $after);
+		}
+		nl 'modules synchronized';
+		file_put_contents($json_path, json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 	} else {
-		nl 'modules uninstalled: '.($before - $after);
+		nl 'Интернет не доступен';
 	}
-	nl 'modules synchronized';
-	file_put_contents($json_path, json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 });
+$pip->setDescription('sync', 'Синхронизирует, Комп с диском, Диск -> Комп');
 
-$pip->command('rm', ($module_name, $json, $json_path) => {
-	if (!empty($json)){
-		$before = $json;
-		for ($i = 0; $i < count($json); $i++) { 
-			$name = $json[$i];
-			if ($name == $module_name){
-				unset($json[$i]);
-				nl 'module remove on yandex disk: ' . $module_name;
-				file_put_contents($json_path, json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+$pip->command('del', ($module_name, $json, $json_path) => {
+	$found = false;
+	if (strlen($module_name) > 0 && $module_name != ''){
+		if (!empty($json)){
+			for ($i = 0; $i < count($json); $i++) { 
+				if (isset($json[$i])) $name = $json[$i];
+				else continue;
+				if ($name == $module_name){
+					$found = !$found;
+					unset($json[$i]);
+					break;
+				}
+			}
+			if ($found){
+				nl 'module deleted: ' . $module_name;
+				$json = array_merge($json, []);
+				if (count($json) > 0) file_put_contents($json_path, json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+				else file_put_contents($json_path, '[]');
+			} else {
+				nl 'Модуль \''.$module_name.'\' не найден';
+			}
+			if ($ie){
 				$ya_disk->delete_file('/sync/'.basename($json_path));
 				$ya_disk->upload_file($json_path, '/sync');
-				file_put_contents($json_path, json_encode($before, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-				return true;
 			}
+			if (!$ie){
+				nl 'Интернет не доступен';
+			}
+			return true;
 		}
+	} else {
+		nl 'Введите Модуль';
 	}
-	nl 'module "' . $module_name.'" not found...';
-	return false;
 });
+$pip->setDescription('del', 'удаляет на компе из списка и заливает на диск по возможности');
 
-$pip->on('remove', ($module_name, $json, $json_path) => {
-	if (!empty($json)){
-		for ($i = 0; $i < count($json); $i++) { 
-			$name = $json[$i];
-			if ($name == $module_name){
-				unset($json[$i]);
-				break;
-			}
+$pip->command('add', ($module_name, $json, $json_path) => {
+	if (strlen($module_name) > 0 && $module_name != ''){
+		if (!in_array($module_name, $json)){
+			$json[] = $module_name;
+			nl 'module add: ' . $module_name;
+		} else {
+			nl 'module exist: ' . $module_name;
+			return false;
 		}
-		nl 'module remove: ' . $module_name;
 		file_put_contents($json_path, json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+	} else {
+		nl 'Введите Модуль';
+	}
+	if ($ie){
 		$ya_disk->delete_file('/sync/'.basename($json_path));
 		$ya_disk->upload_file($json_path, '/sync');
-		return true;
+	}
+	if (!$ie){
+		nl 'Интернет не доступен';
+	}
+	return true;
+});
+$pip->setDescription('add', 'Добавляет на комп в список и заливает на диск по возможности');
+
+$pip->command('rm', ($module_name, $json, $json_path) => {
+	if ($ie){
+		if (!empty($json)){
+			$before = $json;
+			for ($i = 0; $i < count($json); $i++) { 
+				$name = $json[$i];
+				if ($name == $module_name){
+					unset($json[$i]);
+					nl 'module remove on yandex disk: ' . $module_name;
+					file_put_contents($json_path, json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+					$ya_disk->delete_file('/sync/'.basename($json_path));
+					$ya_disk->upload_file($json_path, '/sync');
+					file_put_contents($json_path, json_encode($before, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+					return true;
+				}
+			}
+		}
+		nl 'module "' . $module_name.'" not found...';
+		return false;
+	} else {
+		nl 'Интернет не доступен';
+	}
+});
+$pip->setDescription('rm', 'Удаляет модуль с диска');
+
+$pip->on('uninstall', ($module_name, $json, $json_path) => {
+	if (strlen($module_name) > 0 && $module_name != ''){
+		if ($pip->is_install($module_name)){
+			if (!empty($json)){
+				for ($i = 0; $i < count($json); $i++) { 
+					$name = $json[$i];
+					if ($name == $module_name){
+						unset($json[$i]);
+						nl 'module uninstall: ' . $module_name;
+						file_put_contents($json_path, json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+						break;
+					}
+				}
+				if ($ie){
+					$ya_disk->delete_file('/sync/'.basename($json_path));
+					$ya_disk->upload_file($json_path, '/sync');
+				} else {
+					nl 'Интернет не доступен';
+				}
+				return true;
+			}
+		} else {
+			nl 'Модуль не установлен';
+		}
+	} else {
+		nl 'Введите Модуль';
+	}
+});
+$pip->setDescription('uninstall', 'Удаляет модуль и заливает');
+
+$pip->stabilize = (string $pattern, $names, $spaces = 3) => {
+	$List = [];
+	$newList = arr::blob_string_sort($names);
+	$spacesBefore = $spaces;
+	for ($i = 0; $i < count($newList); $i++){
+		if ($i > 0) {
+			$before = $newList[$i - 1];
+			$name = $newList[$i];
+		} else {
+			$before = '';
+			$name = $newList[$i];
+			goto add;
+		}
+		// nl $spaces;
+		if (array_key_exists($name, $pip->descriptions) && array_key_exists($before, $pip->descriptions)){
+			add:
+			if ($i > 0){
+				if (strlen($newList[$i - 1]) > strlen($name)){
+					$spaces += (strlen($newList[$i - 1]) - strlen($name));
+				}
+			}
+			$share = strlen($name) + $spaces;
+			$shares[] = $share;
+		}
+	}
+	$first = 0;
+	$spaces = $spacesBefore;
+	for ($i = 0; $i < count($newList); $i++){
+		if ($i > 0) {
+			$before = $newList[$i - 1];
+			$name = $newList[$i];
+		} else {
+			$before = '';
+			$name = $newList[$i];
+			goto add_2;
+		}
+		// nl $spaces;
+		if (array_key_exists($name, $pip->descriptions) && array_key_exists($before, $pip->descriptions)){
+			add_2:
+			if ($i > 0){
+				if (strlen($newList[$i - 1]) > strlen($name)){
+					$spaces += (strlen($newList[$i - 1]) - strlen($name));
+				} else {
+					if (count(array_unique($shares)) > 1){
+						if ($first == 0){
+							$spaces += 2;
+							$first++;
+						}
+					}
+				}
+			}
+			$newpattern = str_replace('%name', $name, $pattern);
+			$newpattern = str_replace('%s', str_repeat(' ', $spaces), $newpattern);
+			$newpattern = str_replace('%desc', $pip->getDescription($name), $newpattern);
+			$List[] = $newpattern;
+		}
+	}
+	return $List;
+};
+
+$pip->command('_h', ($module_name, $json, $json_path) => {
+	$all_list = array_merge($pip->command_list, $pip->on_list);
+	// nl $manager_name.'x manager for '.$manager_name . PHP_EOL;
+	nl $pip->manager_name.'x <command> [options]';
+	echo PHP_EOL;
+	$texts = $pip->stabilize('- %name%s%desc', $all_list);
+	foreach ($texts as $text) { 
+		nl $text;
 	}
 });
 
-$pip->command('_h', ($module_name, $json, $json_path) => {
-	nl 'commands:';
-	foreach ($pip->command_list as $name) { 
-		nl '- '.$name;
-	}
+$pip->other(fn($manager_name, $args) => {
+	$command = $manager_name.' '.implode(' ', $args);
+	system($command);
+	// nl $command . ' not found';
 });
