@@ -10,10 +10,6 @@ function internet_exists(): bool {
 }
 $pip = new terminal_manager('pip', $argv);
 $ie = internet_exists();
-$config = [];
-$config['ieno'] = 'Интернет не доступен';
-$config['ieyes'] = 'Интернет доступен';
-$config['diskno'] = str_replace('Интернет', 'Диск', $config['ieno']);
 // $ie = false;
 if ($ie){
 	$token = file_get_contents(dirname(__DIR__).'/token.txt');
