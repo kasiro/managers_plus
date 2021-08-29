@@ -1,23 +1,20 @@
 <?php
 
-require dirname(__DIR__).'/manager.php';
-require dirname(__DIR__).'/yandex.php';
+array_map(fn($p) => require $p, glob(dirname(__DIR__).'/*.php'));
 
-require '/home/kasiro/Документы/managers_plus/pipx/jhp_modules/arr.php';
+require '/home/kasiro/Документы/managers_plus/jhp_modules/arr.php';
 
 function internet_exists(): bool {
 	return @file_get_contents('https://ya.ru/') !== false;
 }
-$pip = new terminal_manager('pip', $argv);
+$manager = new terminal_manager('pip', $argv);
 $ie = internet_exists();
 // $ie = false;
 if ($ie){
 	$token = file_get_contents(dirname(__DIR__).'/token.txt');
 	$ya_disk = new yandex_disk_api($token);
 }
-$allvars = get_defined_vars();
-// $pip->get_module = function($module_name) use ($allvars) {
-	extract($allvars);
+// $manager->get_module = ($module_name) => {
 // 	exec('pip list | grep '.$module_name, $res);
 // 	return $res[0];
 // 	return false;
@@ -40,7 +37,7 @@ function get_data($res, $first, $second, $int = 0){
 		unset($my_res[count($my_res) - 1]);
 	return $my_res;
 }
-$pip->get_help_list = function () {
+$manager->get_help_list = function () {
 	exec('pip -h', $res);
 	// print_r($res);
 	$res = implode(PHP_EOL, $res);
@@ -49,7 +46,7 @@ $pip->get_help_list = function () {
 	// $options = array_merge($options_2, $options_1);
 	return [$commands, $options];
 };
-$pip->is_install = function ($module_name) {
+$manager->is_install = function ($module_name) {
 	exec('pip list', $res);
 	unset($res[0]);unset($res[1]);$res = array_merge($res, []);
 	$modules = [];
@@ -61,7 +58,7 @@ $pip->is_install = function ($module_name) {
 	} else return false;
 };
 $allvars = get_defined_vars();
-$pip->command('status', function($module_name, $json, $json_path, $args) use ($allvars) {
+$manager->command('status', function($module_name, $json, $json_path, $args) use ($allvars) {
 	extract($allvars);
 	if ($ie){
 		echo 'Интернет доступен' . PHP_EOL;
@@ -69,15 +66,13 @@ $pip->command('status', function($module_name, $json, $json_path, $args) use ($a
 		echo 'Интернет не подключен' . PHP_EOL;
 	}
 });
-$allvars = get_defined_vars();
-// $pip->command('get', function($module_name, $json, $json_path, $args) use ($allvars) {
-	extract($allvars);
-// 	if ($pip->is_install($module_name)){
+// $manager->command('get', ($module_name, $json, $json_path, $args) => {
+// 	if ($manager->is_install($module_name)){
 // 		exec('pip list', $res);
 // 		$ec = '';
 // 		$ec .= $res[0] . PHP_EOL;
 // 		$ec .= $res[1] . PHP_EOL;
-// 		$ec .= $pip->get_module($module_name);
+// 		$ec .= $manager->get_module($module_name);
 // 		echo $ec . PHP_EOL;
 // 		// echo 'module "'.$module_name.'" is installed' . PHP_EOL;
 // 	} else {
@@ -85,14 +80,14 @@ $allvars = get_defined_vars();
 // 	}
 // });
 $allvars = get_defined_vars();
-$pip->on('install', function($module_name, $json, $json_path) use ($allvars) {
+$manager->on('install', function($module_name, $json, $json_path) use ($allvars) {
 	extract($allvars);
 	if ($ie){
 		$ya_disk->download_file(dirname($json_path), '/sync/'.basename($json_path));
 	}
-	// $json = $pip->get_json();
+	// $json = $manager->get_json();
 	if (strlen($module_name) > 0 && $module_name != ''){
-		if (!$pip->is_install($module_name)){
+		if (!$manager->is_install($module_name)){
 			if (empty($json)){
 				$json = [];
 				$json[] = $module_name;
@@ -122,16 +117,16 @@ $pip->on('install', function($module_name, $json, $json_path) use ($allvars) {
 		echo 'Введите Модуль' . PHP_EOL;
 	}
 });
-$pip->setDescription('install', 'Устанавливает модуль и заливает');
+$manager->setDescription('install', 'Устанавливает модуль и заливает');
 
 $allvars = get_defined_vars();
-$pip->command('install_all', function($module_name, $json, $json_path) use ($allvars) {
+$manager->command('install_all', function($module_name, $json, $json_path) use ($allvars) {
 	extract($allvars);
 	if (strlen($module_name) == 0 || $module_name == ''){
 		if (!empty($json)){
 			echo 'installing...' . PHP_EOL;
 			foreach ($json as $module){
-				$command = $pip->manager_name.' install '.$module;
+				$command = $manager->manager_name.' install '.$module;
 				echo $command . PHP_EOL;
 			}
 		} else {
@@ -139,9 +134,9 @@ $pip->command('install_all', function($module_name, $json, $json_path) use ($all
 		}
 	}
 });
-$pip->setDescription('install_all', 'Устанавливает все модули из списка');
+$manager->setDescription('install_all', 'Устанавливает все модули из списка');
 
-$pip->command('mlist', function ($module_name, $json, $json_path) {
+$manager->command('mlist', function ($module_name, $json, $json_path) {
 	if (!empty($json)){
 		echo 'modules:' . PHP_EOL;
 		foreach ($json as $name) { 
@@ -151,20 +146,20 @@ $pip->command('mlist', function ($module_name, $json, $json_path) {
 		echo 'Модули не найдены' . PHP_EOL;
 	}
 });
-$pip->setDescription('mlist', 'выводит список модулей');
+$manager->setDescription('mlist', 'выводит список модулей');
 
-$pip->command('count', function ($module_name, $json, $json_path) {
+$manager->command('count', function ($module_name, $json, $json_path) {
 	echo 'Колличество модулей: '.count($json) . PHP_EOL;
 });
-$pip->setDescription('count', 'Выводит колличество модулей');
+$manager->setDescription('count', 'Выводит колличество модулей');
 
 $allvars = get_defined_vars();
-$pip->command('sync', function($module_name, $json, $json_path) use ($allvars) {
+$manager->command('sync', function($module_name, $json, $json_path) use ($allvars) {
 	extract($allvars);
 	if ($ie){
 		$before = count($json);
 		$ya_disk->download_file(dirname($json_path), '/sync/'.basename($json_path));
-		$json = $pip->get_json();
+		$json = $manager->get_json();
 		foreach ($json as $mname){
 			echo 'module "'.$mname.'" sync...' . PHP_EOL;
 		}
@@ -180,10 +175,10 @@ $pip->command('sync', function($module_name, $json, $json_path) use ($allvars) {
 		echo 'Интернет не доступен' . PHP_EOL;
 	}
 });
-$pip->setDescription('sync', 'Синхронизирует, Комп с диском, Диск -> Комп');
+$manager->setDescription('sync', 'Синхронизирует, Комп с диском, Диск -> Комп');
 
 $allvars = get_defined_vars();
-$pip->command('del', function($module_name, $json, $json_path) use ($allvars) {
+$manager->command('del', function($module_name, $json, $json_path) use ($allvars) {
 	extract($allvars);
 	$found = false;
 	if (strlen($module_name) > 0 && $module_name != ''){
@@ -218,10 +213,10 @@ $pip->command('del', function($module_name, $json, $json_path) use ($allvars) {
 		echo 'Введите Модуль' . PHP_EOL;
 	}
 });
-$pip->setDescription('del', 'удаляет на компе из списка и заливает на диск по возможности');
+$manager->setDescription('del', 'удаляет на компе из списка и заливает на диск по возможности');
 
 $allvars = get_defined_vars();
-$pip->command('add', function($module_name, $json, $json_path) use ($allvars) {
+$manager->command('add', function($module_name, $json, $json_path) use ($allvars) {
 	extract($allvars);
 	if (strlen($module_name) > 0 && $module_name != ''){
 		if (!in_array($module_name, $json)){
@@ -244,10 +239,10 @@ $pip->command('add', function($module_name, $json, $json_path) use ($allvars) {
 	}
 	return true;
 });
-$pip->setDescription('add', 'Добавляет на комп в список и заливает на диск по возможности');
+$manager->setDescription('add', 'Добавляет на комп в список и заливает на диск по возможности');
 
 $allvars = get_defined_vars();
-$pip->command('rm', function($module_name, $json, $json_path) use ($allvars) {
+$manager->command('rm', function($module_name, $json, $json_path) use ($allvars) {
 	extract($allvars);
 	if ($ie){
 		if (!empty($json)){
@@ -271,13 +266,13 @@ $pip->command('rm', function($module_name, $json, $json_path) use ($allvars) {
 		echo 'Интернет не доступен' . PHP_EOL;
 	}
 });
-$pip->setDescription('rm', 'Удаляет модуль с диска');
+$manager->setDescription('rm', 'Удаляет модуль с диска');
 
 $allvars = get_defined_vars();
-$pip->on('uninstall', function($module_name, $json, $json_path) use ($allvars) {
+$manager->on('uninstall', function($module_name, $json, $json_path) use ($allvars) {
 	extract($allvars);
 	if (strlen($module_name) > 0 && $module_name != ''){
-		if ($pip->is_install($module_name)){
+		if ($manager->is_install($module_name)){
 			if (!empty($json)){
 				for ($i = 0; $i < count($json); $i++) { 
 					$name = $json[$i];
@@ -303,10 +298,10 @@ $pip->on('uninstall', function($module_name, $json, $json_path) use ($allvars) {
 		echo 'Введите Модуль' . PHP_EOL;
 	}
 });
-$pip->setDescription('uninstall', 'Удаляет модуль и заливает');
+$manager->setDescription('uninstall', 'Удаляет модуль и заливает');
 
 $allvars = get_defined_vars();
-$pip->stabilize = function(string $pattern, $names, $spaces = 3) use ($allvars) {
+$manager->stabilize = function(string $pattern, $names, $spaces = 3) use ($allvars) {
 	extract($allvars);
 	$List = [];
 	$newList = arr::blob_string_sort($names);
@@ -321,7 +316,7 @@ $pip->stabilize = function(string $pattern, $names, $spaces = 3) use ($allvars) 
 			goto add;
 		}
 		// echo $spaces . PHP_EOL;
-		if (array_key_exists($name, $pip->descriptions) && array_key_exists($before, $pip->descriptions)){
+		if (array_key_exists($name, $manager->descriptions) && array_key_exists($before, $manager->descriptions)){
 			add:
 			if ($i > 0){
 				if (strlen($newList[$i - 1]) > strlen($name)){
@@ -344,7 +339,7 @@ $pip->stabilize = function(string $pattern, $names, $spaces = 3) use ($allvars) 
 			goto add_2;
 		}
 		// echo $spaces . PHP_EOL;
-		if (array_key_exists($name, $pip->descriptions) && array_key_exists($before, $pip->descriptions)){
+		if (array_key_exists($name, $manager->descriptions) && array_key_exists($before, $manager->descriptions)){
 			add_2:
 			if ($i > 0){
 				if (strlen($newList[$i - 1]) > strlen($name)){
@@ -360,7 +355,7 @@ $pip->stabilize = function(string $pattern, $names, $spaces = 3) use ($allvars) 
 			}
 			$newpattern = str_replace('%name', $name, $pattern);
 			$newpattern = str_replace('%s', str_repeat(' ', $spaces), $newpattern);
-			$newpattern = str_replace('%desc', $pip->getDescription($name), $newpattern);
+			$newpattern = str_replace('%desc', $manager->getDescription($name), $newpattern);
 			$List[] = $newpattern;
 		}
 	}
@@ -368,32 +363,70 @@ $pip->stabilize = function(string $pattern, $names, $spaces = 3) use ($allvars) 
 };
 
 $allvars = get_defined_vars();
-$pip->command('_h', function($module_name, $json, $json_path) use ($allvars) {
+$manager->command('_h', function($module_name, $json, $json_path) use ($allvars) {
 	extract($allvars);
-	$all_list = array_merge($pip->command_list, $pip->on_list);
+	$all_list = array_merge($manager->command_list, $manager->on_list);
 	// echo $manager_name.'x manager for '.$manager_name . PHP_EOL . PHP_EOL;
-	echo $pip->manager_name.'x <command> [options]' . PHP_EOL;
+	echo $manager->manager_name.'x <command> [options]' . PHP_EOL;
 	echo PHP_EOL;
-	$texts = $pip->stabilize('- %name%s%desc', $all_list);
+	$texts = $manager->stabilize('- %name%s%desc', $all_list);
 	foreach ($texts as $text) { 
 		echo $text . PHP_EOL;
 	}
 });
 
 $allvars = get_defined_vars();
-$pip->other(function($manager_name, $args) use ($allvars) {
+$manager->other(function($manager_name, $args) use ($allvars) {
 	extract($allvars);
 	if (count($args) > 1){
 		$command = $manager_name.' '.implode(' ', $args);
 	} else {
 		$command = $manager_name.' '.$args[1];
-		$com = $args[1];
 	}
-	list($commands, $options) = $pip->get_help_list();
-	print_r($commands);
-	print_r($options);
-	// if (in_array($com, $commands)){
-	// 	echo $command . PHP_EOL;
-	// }
+	list($commands, $options) = $manager->get_help_list();
+	$com = '';
+	for ($i = 1; $i <= count($args); $i++){
+		if (!str_starts_with($args[$i], '-')){
+			$com = $args[$i];
+			break;
+		}
+	}
+	$option_found = false;
+	$current_options = [];
+	for ($i = 1; $i <= count($args); $i++){
+		$option = $args[$i];
+		if (str_starts_with($option, '-') && in_array($option, $options)){
+			$option_found = true;
+			$current_options[] = $option;
+		}
+	}
+	// print_r($commands);
+	// print_r($options);
+	// print_r($current_options);
+	if (count($current_options) == 1){
+		$option = $current_options[0];
+	} else {
+		$option = implode(' ', $current_options);
+	}
+	if (strlen($com) > 0 && in_array($com, $commands)){
+		if ($option_found){
+			system($command);
+			// echo $command . ' (merged)' . PHP_EOL;
+			// echo $com . ' (com)' . PHP_EOL;
+			// echo $option . ' (option)' . PHP_EOL;
+		} else {
+			system($command);
+			// echo $command . ' (command only)' . PHP_EOL;
+		}
+	} else {
+		if (strlen($com) > 0 && !in_array($com, $commands)){
+			echo 'argument "'.$com.'" not found' . PHP_EOL;
+		} else {
+			if ($option_found){
+				system($command);
+				// echo $command . ' (option only)' . PHP_EOL;
+			}
+		}
+	}
 	// system($command);
 });

@@ -22,7 +22,7 @@ class terminal_manager {
 	}
 
 	public command(string|array $command_name, callable $func){
-		$first = $->args[1];
+		$first = @$->args[1] ?? '';
 		$my_args = [];
 		for ($i = 2; $i < count($->args); $i++) { 
 			$my_args[] = $->args[$i];
@@ -82,7 +82,7 @@ class terminal_manager {
 	}
 
 	public on(string|array $command_name, callable $func){
-		$first = $->args[1];
+		$first = @$->args[1] ?? '';
 		$my_args = [];
 		for ($i = 2; $i < count($->args); $i++) { 
 			$my_args[] = $->args[$i];
@@ -114,12 +114,15 @@ class terminal_manager {
 				} 
 			}
 		}
-		if (!in_array($command_name, $->on_list))
+		if (!in_array($command_name, $->on_list) && !is_array($command_name)){
 			$->on_list[] = $command_name;
+		} else {
+			$->on_list = array_merge($->on_list, $command_name);
+		}
 	}
 
 	public other(callable $func){
-		$command_name = $->args[1];
+		$command_name = @$->args[1] ?? '';
 		$command = $->manager_name.' '.implode(' ', $->args);
 		if (!in_array($command_name, $->on_list) && !in_array($command_name, $->command_list)){
 			$res = $func($->manager_name, $->args);

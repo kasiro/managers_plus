@@ -22,7 +22,7 @@ class terminal_manager {
 	}
 
 	public function command(string|array $command_name, callable $func){
-		$first = $this->args[1];
+		$first = @$this->args[1] ?? '';
 		$my_args = [];
 		for ($i = 2; $i < count($this->args); $i++) { 
 			$my_args[] = $this->args[$i];
@@ -82,7 +82,7 @@ class terminal_manager {
 	}
 
 	public function on(string|array $command_name, callable $func){
-		$first = $this->args[1];
+		$first = @$this->args[1] ?? '';
 		$my_args = [];
 		for ($i = 2; $i < count($this->args); $i++) { 
 			$my_args[] = $this->args[$i];
@@ -114,12 +114,15 @@ class terminal_manager {
 				} 
 			}
 		}
-		if (!in_array($command_name, $this->on_list))
+		if (!in_array($command_name, $this->on_list) && !is_array($command_name)){
 			$this->on_list[] = $command_name;
+		} else {
+			$this->on_list = array_merge($this->on_list, $command_name);
+		}
 	}
 
 	public function other(callable $func){
-		$command_name = $this->args[1];
+		$command_name = @$this->args[1] ?? '';
 		$command = $this->manager_name.' '.implode(' ', $this->args);
 		if (!in_array($command_name, $this->on_list) && !in_array($command_name, $this->command_list)){
 			$res = $func($this->manager_name, $this->args);
